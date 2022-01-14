@@ -76,7 +76,6 @@ public class backgroundTransparentManager : MonoBehaviour
         Mat origin2 = new Mat();
         if (saveMask == false)
         {
-            //Texture2D texture2D = null;
             texture2D = null;
 
             for (int i = 0; i < DM.QR.Count; i++)
@@ -84,7 +83,6 @@ public class backgroundTransparentManager : MonoBehaviour
                 if (CM.QRtext == DM.QR[i])
                 {
                     texture2D = DM.MASK[i];
-                    //texture2D = ScaleTexture(texture2D, 2048, 1024); // 사이즈조절
                     break;
                 }
             }
@@ -94,7 +92,6 @@ public class backgroundTransparentManager : MonoBehaviour
                 return;
             }
 
-            m_texture.Resize(texture2D.width, texture2D.height);
             origin2 = TextureToMat(texture2D);
         }
 
@@ -172,92 +169,5 @@ public class backgroundTransparentManager : MonoBehaviour
         result.SetPixels(rpixels, 0);
         result.Apply();
         return result;
-    }
-
-    Mat MakeMask()
-    {
-        m_texture = SM.target;
-
-        #region load texture
-        Mat origin = TextureToMat(m_texture);
-        //m_image_origin.texture = MatToTexture(origin);
-        #endregion
-
-        #region  Gray scale image
-        Mat grayMat = new Mat();
-        Cv2.CvtColor(origin, grayMat, ColorConversionCodes.BGR2GRAY);
-        #endregion
-
-        #region Find Edge
-        Mat thresh = new Mat();
-        Cv2.Threshold(grayMat, thresh, v_thresh, v_maxval, ThresholdTypes.BinaryInv);
-        m_Image_binarization.texture = MatToTexture(thresh);
-        #endregion
-
-        #region Create Mask 
-        Mat Mask = TextureToMat(MatToTexture(grayMat));
-        Point[][] contours; HierarchyIndex[] hierarchy;
-        Cv2.FindContours(thresh, out contours, out hierarchy, RetrievalModes.Tree, ContourApproximationModes.ApproxNone, null);
-        for (int i = 0; i < contours.Length; i++)
-        {
-            Cv2.DrawContours(Mask, new Point[][] { contours[i] }, 0, new Scalar(0, 0, 0), -1);
-        }
-        Mask = Mask.CvtColor(ColorConversionCodes.BGR2GRAY);
-        Cv2.Threshold(Mask, Mask, v_thresh, v_maxval, ThresholdTypes.Binary);
-        m_image_mask.texture = MatToTexture(Mask);
-        #endregion
-
-        //세팅에서 mask저장 체크시 활성화
-        SM.SavePNG(MatToTexture(Mask), mask_path, mask_name);
-
-        return Mask;
-    }
-
-
-    Mat ComparisonQR() //QR코드 값 비교하고 mask가져오기
-    {
-        Texture2D texture2D = null;
-
-        for (int i = 0; i < DM.QR.Count; i++)
-        {
-            if (CM.QRtext == DM.QR[i])
-            {
-                texture2D = DM.MASK[i];
-                break;
-            }
-        }
-
-        m_texture = texture2D;
-
-        #region load texture
-        Mat origin = TextureToMat(m_texture);
-        //m_image_origin.texture = MatToTexture(origin);
-        #endregion
-
-        #region  Gray scale image
-        Mat grayMat = new Mat();
-        Cv2.CvtColor(origin, grayMat, ColorConversionCodes.BGR2GRAY);
-        #endregion
-
-        #region Find Edge
-        Mat thresh = new Mat();
-        Cv2.Threshold(grayMat, thresh, v_thresh, v_maxval, ThresholdTypes.BinaryInv);
-        m_Image_binarization.texture = MatToTexture(thresh);
-        #endregion
-
-        #region Create Mask 
-        Mat Mask = TextureToMat(MatToTexture(grayMat));
-        Point[][] contours; HierarchyIndex[] hierarchy;
-        Cv2.FindContours(thresh, out contours, out hierarchy, RetrievalModes.Tree, ContourApproximationModes.ApproxNone, null);
-        for (int i = 0; i < contours.Length; i++)
-        {
-            Cv2.DrawContours(Mask, new Point[][] { contours[i] }, 0, new Scalar(0, 0, 0), -1);
-        }
-        Mask = Mask.CvtColor(ColorConversionCodes.BGR2GRAY);
-        Cv2.Threshold(Mask, Mask, v_thresh, v_maxval, ThresholdTypes.Binary);
-        m_image_mask.texture = MatToTexture(Mask);
-        #endregion
-
-        return Mask;
     }
 }

@@ -36,6 +36,11 @@ public class InstantiateManager : MonoBehaviour
     {
         //Texture2D tx = SM.target;
         Texture2D tx = (Texture2D)BTM.target;
+        if(tx == null)
+        {
+            Debug.LogWarning("다시찍어주세요!");
+            return;
+        }    
         Rect rect = new Rect(0, 0, tx.width, tx.height);
         Sprite sp = Sprite.Create(tx, rect, new Vector2(0.5f, 0.5f));
         sp.name = name;

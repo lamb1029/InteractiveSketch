@@ -28,6 +28,13 @@ public class ScannerManager : MonoBehaviour
     [Range(0, 0.15f), Tooltip("정밀도")]
     public float epsilon;
 
+    Mat ori;
+    Mat grayMat;
+    Mat blackMat;
+    Mat cannyMat;
+    Mat targetMat;
+
+
     private void Start()
     {
         BTM = FindObjectOfType<backgroundTransparentManager>();
@@ -36,13 +43,13 @@ public class ScannerManager : MonoBehaviour
     public void SetTexture2D(Texture2D _baseTexture)
     {
         baseTexture = GetTexture2D(_baseTexture);
-        Mat ori = TextureToMat(_baseTexture);
-        Mat grayMat = GrayMat(ori);
-        Mat blackMat = BlackMat(grayMat);
-        Mat cannyMat = CannyMat(blackMat);
+        ori = TextureToMat(_baseTexture);
+        GrayMat(ori, out grayMat);
+        BlackMat(grayMat, out blackMat);
+        CannyMat(blackMat, out cannyMat);
         Point[] corners;
         findRect(cannyMat, out corners);
-        Mat targetMat = TransFormImage(ori, corners);
+        TransFormImage(ori, corners, out targetMat);
 
         MakeTexture(grayMat, grayRawImage);
         MakeTexture(blackMat, blackRawImage);
@@ -67,42 +74,26 @@ public class ScannerManager : MonoBehaviour
         return texture2D;
     }
 
-    Mat GrayMat(Texture2D _baseTexture)
+    void GrayMat(Mat _ori, out Mat grayMat)
     {
-        Mat grayMat = new Mat();
-        grayMat = TextureToMat(_baseTexture);
-
-        Cv2.CvtColor(grayMat, grayMat, ColorConversionCodes.BGR2GRAY);
-
-        return grayMat;
-    }
-
-    Mat GrayMat(Mat _ori)
-    {
-        Mat grayMat = new Mat();
+        grayMat = new Mat();
 
         Cv2.CvtColor(_ori, grayMat, ColorConversionCodes.BGR2GRAY);
-
-        return grayMat;
     }
 
-    Mat BlackMat(Mat _gray)
+    void BlackMat(Mat _gray, out Mat blackMat)
     {
-        Mat blackMat = new Mat();
+        blackMat = new Mat();
         blackMat = _gray.Threshold(100, 255, ThresholdTypes.Otsu);
 
         Cv2.BitwiseNot(blackMat, blackMat);
-
-        return blackMat;
     }
 
-    Mat CannyMat(Mat _black)
+    void CannyMat(Mat _black, out Mat cannyMat)
     {
-        Mat cannyMat = new Mat();
+        cannyMat = new Mat();
 
         Cv2.Canny(_black, cannyMat, 50, 50);
-
-        return cannyMat;
     }
 
     void findRect(Mat _canny, out Point[] corners)
@@ -115,37 +106,37 @@ public class ScannerManager : MonoBehaviour
         _canny.FindContours(out contours, out h, RetrievalModes.External, ContourApproximationModes.ApproxSimple);
 
         double maxArea = 0;
-        for(int i = 0; i < contours.Length; i++)
+        for (int i = 0; i < contours.Length; i++)
         {
             double length = Cv2.ArcLength(contours[i], true);
 
             Point[] tmp = Cv2.ApproxPolyDP(contours[i], length * epsilon, true);
 
             double area = Cv2.ContourArea(contours[i]);
-            if(tmp.Length == 4 && area > maxArea)
+            if (tmp.Length == 4 && area > maxArea)
             {
                 maxArea = area;
                 corners = tmp;
             }
         }
 
-        //if(corners != null)
+        //if (corners != null)
         //{
         //    _ori.DrawContours(new Point[][] { corners }, 0, Scalar.Red, 5);
 
-        //    for(int i = 0; i < corners.Length; i++)
+        //    for (int i = 0; i < corners.Length; i++)
         //    {
         //        _ori.Circle(corners[i], 20, Scalar.Blue, 5);
         //    }
         //}
     }
 
-    Mat TransFormImage(Mat _ori, Point[] corners)
+    void TransFormImage(Mat _ori, Point[] corners, out Mat targetMat)
     {
-        Mat target = new Mat();
+        targetMat = new Mat();
 
         if (corners == null)
-            return null;
+            return;
 
         SwapCorners(corners);
 
@@ -155,14 +146,12 @@ public class ScannerManager : MonoBehaviour
 
         Mat transform = Cv2.GetPerspectiveTransform(input, square);
 
-        Cv2.WarpPerspective(_ori, target, transform, new Size(256, 256));
+        Cv2.WarpPerspective(_ori, targetMat, transform, new Size(256, 256));
 
         //int s = (int)(256 * 0.05);
         //int w = (int)(256 * 0.9);
         //OpenCvSharp.Rect innerRect = new OpenCvSharp.Rect(s, s, w, w);
         //target = target[innerRect];
-
-        return target;
     }
 
     void SwapCorners(Point[] corners) // 위치 바꾸기(회전방지)
